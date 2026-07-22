@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>📖 Mon cours</title><link rel="stylesheet" href="/static/css/style.css"><style>
+.course-header{background:linear-gradient(135deg,#1a237e,#0d47a1);color:#fff;padding:20px;border-radius:10px;margin-bottom:20px}
+.chapter{background:#f8f9fa;border-radius:8px;margin-bottom:16px;padding:16px;border-left:4px solid #1a237e}
+.session{background:white;padding:12px;border-radius:6px;margin:8px 0;border:1px solid #dee2e6;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.attend-btn{background:#2e7d32;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer}
+.attend-btn.done{background:#6c757d;cursor:default}
+.progress-bar{height:20px;background:#e0e0e0;border-radius:10px;overflow:hidden}
+.progress-bar .fill{height:100%;background:#1a237e;transition:width 0.5s}
+</style></head>
+<body>
+<div class="container">
+<header><h1>📖 Contenu du cours</h1><div class="header-actions"><a href="/" style="color:#fff;">← Retour</a></div></header>
+<main style="padding:20px;"><div id="course-detail"></div></main>
+<footer><p>&copy; 2026 E-Learning Sénégal</p></footer>
+</div>
+<script>
+const enrollmentId = new URLSearchParams(window.location.search).get('enrollment');
+if(!enrollmentId) document.getElementById('course-detail').innerHTML = '<p>Paramètre manquant.</p>';
+else loadCourseDetail(enrollmentId);
+async function loadCourseDetail(eid){
+    try{
+        const resp = await fetch(`/api/course/enrollment/${eid}/detail`);
+        const data = await resp.json();
+        if(data.error){ document.getElementById('course-detail').innerHTML = `<p style="color:red;">${data.error}</p>`; return; }
+        renderCourse(data);
+    }catch(err){ document.getElementById('course-detail').innerHTML = '<p>Erreur de chargement.</p>'; }
+}
+function renderCourse(data){
+    const enrollment = data.enrollment, chapters = data.chapters || [], progress = data.progress || {};
+    let html = `<div class="course-header"><h2>${enrollment.course_title}</h2><p>${enrollment.course_description||''}</p><p><strong>Statut:</strong> ${enrollment.status} | <strong>Progression:</strong> ${progress.progress_percentage||0}%</p><div class="progress-bar"><div class="fill" style="width:${progress.progress_percentage||0}%"></div></div><p>Sessions suivies: ${progress.attended_sessions||0} / ${progress.total_sessions||0}</p></div>`;
+    const dayMap = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+    chapters.forEach(ch => {
+        html += `<div class="chapter"><h3>📘 ${ch.title}</h3><p>${ch.description||''}</p><div>`;
+        (ch.sessions||[]).forEach(s => {
+            const day = dayMap[s.day_of_week]||'?';
+            const isAttended = s.attended||false;
+            html += `<div class="session"><div><span class="time">${day} ${s.start_time} - ${s.end_time}</span><span style="margin-left:12px;">${s.title||''}</span>${s.location?`<span style="margin-left:12px;">📍 ${s.location}</span>`:''}${s.online_link?`<a href="${s.online_link}" target="_blank" style="margin-left:12px;">🔗 Lien</a>`:''}</div><div><span style="margin-right:8px;">${isAttended?'✅ Présent':'❌ Absent'}</span><button class="attend-btn ${isAttended?'done':''}" onclick="toggleAttendance(${s.id},${enrollment.id},${!isAttended})" ${isAttended?'disabled':''}>${isAttended?'Déjà marqué':'Marquer présent'}</button></div></div>`;
+        });
+        html += `</div></div>`;
+    });
+    document.getElementById('course-detail').innerHTML = html;
+}
+async function toggleAttendance(sid,eid,attended){
+    if(!attended) return;
+    try{
+        const resp = await fetch('/api/course/attendance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sid,enrollment_id:eid,attended:true})});
+        if(resp.ok) location.reload(); else alert('Erreur.');
+    }catch(err){ alert('Erreur réseau.'); }
+}
+</script>
+</body>
+</html>

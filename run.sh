@@ -26,7 +26,7 @@ mkdir -p logs static/certificates
 pkill -f "gunicorn.*app:app" 2>/dev/null || true
 
 echo "▶️ Démarrage du serveur sur http://localhost:5000"
-gunicorn -w 2 -b 127.0.0.1:5000 app:app \
+gunicorn -w 2 -b 127.0.0.1:5001 app:app \
     --access-logfile logs/access.log \
     --error-logfile logs/error.log \
     --daemon
