@@ -6,3 +6,6 @@ logs/
 *.log
 .DS_Store
 static/certificates/
+data/*.shm
+data/*.wal
+data/*.old
