@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Application E-Learning Sénégal
+"""
+
+from flask import Flask, render_template, send_from_directory
+from flask_cors import CORS
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from app.routes.api import api_bp
+
+app = Flask(__name__, static_folder='static', template_folder='templates')
+app.secret_key = os.urandom(24)
+
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+app.register_blueprint(api_bp)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory('static', path)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)

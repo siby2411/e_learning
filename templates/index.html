@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 E-Learning Sénégal</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 E-Learning Sénégal</h1>
+            <p>Plateforme d'inscription aux cours en ligne</p>
+            <div class="header-actions">
+                <span id="user-status">Non connecté</span>
+                <button onclick="showLogin()" id="login-btn">Se connecter</button>
+                <button onclick="showRegister()" id="register-btn">S'inscrire</button>
+                <button onclick="logout()" id="logout-btn" style="display:none;">Déconnexion</button>
+            </div>
+        </header>
+
+        <nav>
+            <a href="#" onclick="showTab('courses')">📖 Cours</a>
+            <a href="#" onclick="showTab('my-courses')">📋 Mes cours</a>
+            <a href="#" onclick="showTab('certificates')">🏆 Certificats</a>
+            <a href="#" onclick="showTab('stats')">📊 Statistiques</a>
+        </nav>
+
+        <main>
+            <!-- Cours -->
+            <section id="tab-courses" class="tab active">
+                <h2>Tous les cours disponibles</h2>
+                <div class="filters">
+                    <select id="filter-category" onchange="loadCourses()">
+                        <option value="">Toutes les catégories</option>
+                    </select>
+                    <select id="filter-difficulty" onchange="loadCourses()">
+                        <option value="">Tous niveaux</option>
+                        <option value="débutant">Débutant</option>
+                        <option value="intermédiaire">Intermédiaire</option>
+                        <option value="avancé">Avancé</option>
+                    </select>
+                    <select id="filter-price" onchange="loadCourses()">
+                        <option value="">Tous</option>
+                        <option value="free">Gratuits</option>
+                        <option value="paid">Payants</option>
+                    </select>
+                </div>
+                <div id="courses-grid" class="courses-grid"></div>
+            </section>
+
+            <!-- Mes cours -->
+            <section id="tab-my-courses" class="tab" style="display:none;">
+                <h2>Mes inscriptions</h2>
+                <div id="my-enrollments"></div>
+            </section>
+
+            <!-- Certificats -->
+            <section id="tab-certificates" class="tab" style="display:none;">
+                <h2>Mes certificats</h2>
+                <div id="my-certificates"></div>
+            </section>
+
+            <!-- Statistiques -->
+            <section id="tab-stats" class="tab" style="display:none;">
+                <h2>Statistiques de la plateforme</h2>
+                <div class="stats-grid" id="global-stats"></div>
+            </section>
+        </main>
+
+        <!-- Modals -->
+        <div id="modal-login" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('modal-login')">&times;</span>
+                <h2>Connexion</h2>
+                <form onsubmit="login(event)">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Se connecter</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modal-register" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('modal-register')">&times;</span>
+                <h2>Créer un compte</h2>
+                <form onsubmit="registerUser(event)">
+                    <div class="form-group">
+                        <label>Prénom *</label>
+                        <input type="text" id="reg-firstname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom *</label>
+                        <input type="text" id="reg-lastname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="reg-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe *</label>
+                        <input type="password" id="reg-password" minlength="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Téléphone</label>
+                        <input type="tel" id="reg-phone">
+                    </div>
+                    <button type="submit" class="btn-primary">Créer mon compte</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modal-enroll" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('modal-enroll')">&times;</span>
+                <h2>Inscription au cours</h2>
+                <div id="enroll-details"></div>
+                <div id="enroll-actions"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 E-Learning Sénégal</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

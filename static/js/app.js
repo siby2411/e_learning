@@ -1,0 +1,296 @@
+const API_BASE = '/api';
+let currentUser = null;
+let authToken = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+    loadCourses();
+    checkSession();
+});
+
+function checkSession() {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    if (token && user) {
+        authToken = token;
+        currentUser = JSON.parse(user);
+        document.getElementById('user-status').textContent = `👤 ${currentUser.first_name} ${currentUser.last_name}`;
+        document.getElementById('login-btn').style.display = 'none';
+        document.getElementById('register-btn').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'inline-block';
+    }
+}
+
+function showLogin() { document.getElementById('modal-login').style.display = 'flex'; }
+function showRegister() { document.getElementById('modal-register').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+async function login(event) {
+    event.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    try {
+        const resp = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            authToken = data.token;
+            currentUser = data.user;
+            localStorage.setItem('token', authToken);
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            closeModal('modal-login');
+            location.reload();
+        } else {
+            alert('❌ ' + data.error);
+        }
+    } catch (err) { alert('❌ Erreur de connexion'); }
+}
+
+async function registerUser(event) {
+    event.preventDefault();
+    const data = {
+        first_name: document.getElementById('reg-firstname').value,
+        last_name: document.getElementById('reg-lastname').value,
+        email: document.getElementById('reg-email').value,
+        password: document.getElementById('reg-password').value,
+        phone: document.getElementById('reg-phone').value
+    };
+    
+    try {
+        const resp = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await resp.json();
+        if (result.success) {
+            alert('✅ Compte créé ! Connectez-vous.');
+            closeModal('modal-register');
+            showLogin();
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch (err) { alert('❌ Erreur d\'inscription'); }
+}
+
+function logout() {
+    if (authToken) {
+        fetch(`${API_BASE}/auth/logout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    location.reload();
+}
+
+function showTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    if (tabName === 'my-courses') loadMyEnrollments();
+    if (tabName === 'certificates') loadCertificates();
+    if (tabName === 'stats') loadStats();
+}
+
+async function loadCategories() {
+    try {
+        const resp = await fetch(`${API_BASE}/courses/categories`);
+        const data = await resp.json();
+        const select = document.getElementById('filter-category');
+        data.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.slug;
+            opt.textContent = `${cat.icon || '📚'} ${cat.name}`;
+            select.appendChild(opt);
+        });
+    } catch (err) { console.error(err); }
+}
+
+async function loadCourses() {
+    const category = document.getElementById('filter-category').value;
+    const difficulty = document.getElementById('filter-difficulty').value;
+    const price = document.getElementById('filter-price').value;
+    
+    let url = `${API_BASE}/courses?`;
+    if (category) url += `category=${category}&`;
+    if (difficulty) url += `difficulty=${difficulty}&`;
+    if (price === 'free') url += `is_free=true&`;
+    if (price === 'paid') url += `is_free=false&`;
+    
+    try {
+        const resp = await fetch(url);
+        const courses = await resp.json();
+        const grid = document.getElementById('courses-grid');
+        grid.innerHTML = '';
+        
+        if (courses.length === 0) {
+            grid.innerHTML = '<p>Aucun cours disponible.</p>';
+            return;
+        }
+        
+        courses.forEach(course => {
+            const card = document.createElement('div');
+            card.className = 'course-card';
+            card.innerHTML = `
+                <div class="course-thumb">${course.icon || '📖'}</div>
+                <div class="course-body">
+                    <h3>${course.title}</h3>
+                    <div class="meta">
+                        <span class="badge">${course.difficulty_level || 'Débutant'}</span>
+                        <span class="badge">${course.duration_weeks || '?'} semaines</span>
+                        <span class="price">${course.is_free ? '🆓 Gratuit' : `${course.price} ${course.currency}`}</span>
+                    </div>
+                    <p class="description">${course.description ? course.description.substring(0, 100) + '...' : ''}</p>
+                    <button class="btn-enroll ${course.is_free ? 'free' : ''}" onclick="showEnrollModal(${course.id})">
+                        ${course.is_free ? '🆓 S\'inscrire' : '💰 S\'inscrire'}
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (err) { console.error(err); }
+}
+
+async function showEnrollModal(courseId) {
+    if (!currentUser) {
+        if (confirm('Connectez-vous pour vous inscrire.')) showLogin();
+        return;
+    }
+    
+    try {
+        const resp = await fetch(`${API_BASE}/courses/${courseId}`);
+        const data = await resp.json();
+        const course = data.course;
+        
+        document.getElementById('modal-enroll').style.display = 'flex';
+        document.getElementById('enroll-details').innerHTML = `
+            <h3>${course.title}</h3>
+            <p><strong>Prix:</strong> ${course.is_free ? '🆓 Gratuit' : `${course.price} ${course.currency}`}</p>
+            <p><strong>Durée:</strong> ${course.duration_weeks || '?'} semaines</p>
+        `;
+        
+        document.getElementById('enroll-actions').innerHTML = `
+            <button class="btn-primary" onclick="confirmEnroll(${course.id})">
+                ${course.is_free ? '🆓 S\'inscrire' : '💰 Payer et s\'inscrire'}
+            </button>
+            <button onclick="closeModal('modal-enroll')" style="margin-top:8px;">Annuler</button>
+        `;
+    } catch (err) { alert('❌ Erreur'); }
+}
+
+async function confirmEnroll(courseId) {
+    if (!currentUser) { alert('Connectez-vous.'); return; }
+    
+    try {
+        const resp = await fetch(`${API_BASE}/enrollments/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: currentUser.email,
+                password: 'dummy',
+                first_name: currentUser.first_name,
+                last_name: currentUser.last_name,
+                course_id: courseId
+            })
+        });
+        const result = await resp.json();
+        
+        if (result.success) {
+            if (result.is_free) {
+                alert('✅ Inscription confirmée !');
+                closeModal('modal-enroll');
+                loadMyEnrollments();
+            } else if (result.payment_required) {
+                if (confirm(`💳 Paiement: ${result.amount} ${result.currency}\nSimuler ?`)) {
+                    await processPayment(result.enrollment_id, result.amount, result.currency);
+                }
+            }
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch (err) { alert('❌ Erreur'); }
+}
+
+async function processPayment(enrollmentId, amount, currency) {
+    try {
+        const resp = await fetch(`${API_BASE}/enrollments/${enrollmentId}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                payment: { amount, currency, method: 'mobile_money', reference: 'PAY-' + Date.now() }
+            })
+        });
+        const result = await resp.json();
+        if (result.success) {
+            alert('✅ Paiement accepté !');
+            closeModal('modal-enroll');
+            loadMyEnrollments();
+        } else {
+            alert('❌ ' + result.error);
+        }
+    } catch (err) { alert('❌ Erreur'); }
+}
+
+async function loadMyEnrollments() {
+    if (!currentUser) {
+        document.getElementById('my-enrollments').innerHTML = '<p>Connectez-vous.</p>';
+        return;
+    }
+    
+    try {
+        const resp = await fetch(`${API_BASE}/enrollments/user/${currentUser.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const enrollments = await resp.json();
+        const container = document.getElementById('my-enrollments');
+        container.innerHTML = '';
+        
+        if (enrollments.length === 0) {
+            container.innerHTML = '<p>Aucune inscription.</p>';
+            return;
+        }
+        
+        enrollments.forEach(e => {
+            const div = document.createElement('div');
+            div.className = 'enrollment-item';
+            const statusClass = e.status === 'active' ? 'status-active' : e.status === 'pending' ? 'status-pending' : 'status-completed';
+            div.innerHTML = `
+                <div class="info">
+                    <h4>${e.course_title}</h4>
+                    <span class="${statusClass}">${e.status}</span>
+                    <span style="margin-left:10px;font-size:13px;">${e.progress_percentage || 0}%</span>
+                    <div class="progress-bar"><div class="fill" style="width:${e.progress_percentage || 0}%"></div></div>
+                </div>
+                <div>${e.certificate_generated ? '🏆' : ''}</div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (err) { console.error(err); }
+}
+
+function loadCertificates() {
+    document.getElementById('my-certificates').innerHTML = '<p>Terminez vos cours pour obtenir vos certificats.</p>';
+}
+
+async function loadStats() {
+    try {
+        const resp = await fetch(`${API_BASE}/stats/overview`);
+        const stats = await resp.json();
+        document.getElementById('global-stats').innerHTML = `
+            <div class="stat-card"><h3>${stats.total_users || 0}</h3><p>👥 Utilisateurs</p></div>
+            <div class="stat-card"><h3>${stats.total_courses || 0}</h3><p>📖 Cours</p></div>
+            <div class="stat-card"><h3>${stats.active_enrollments || 0}</h3><p>📋 Inscriptions</p></div>
+            <div class="stat-card"><h3>${stats.completions || 0}</h3><p>🏆 Terminés</p></div>
+            <div class="stat-card"><h3>${(stats.total_revenue || 0).toLocaleString()} FCFA</h3><p>💰 Revenus</p></div>
+        `;
+    } catch (err) { console.error(err); }
+}
+
+document.getElementById('filter-category')?.addEventListener('change', loadCourses);
+document.getElementById('filter-difficulty')?.addEventListener('change', loadCourses);
+document.getElementById('filter-price')?.addEventListener('change', loadCourses);
