@@ -3,6 +3,7 @@ from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from routes.api import api_bp
 from routes.academic_api import academic_bp
+from routes.course_content_api import course_content_bp
 from routes.admin_api import admin_bp
 from routes.advanced_api import advanced_bp
 
@@ -12,6 +13,7 @@ CORS(app)
 
 app.register_blueprint(api_bp)
 app.register_blueprint(academic_bp)
+app.register_blueprint(course_content_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(advanced_bp)
 
