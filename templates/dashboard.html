@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard - E-Learning</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #f8f9fa; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #dee2e6; }
+        .stat-card h3 { color: #1a237e; font-size: 24px; margin: 0; }
+        .stat-card p { color: #666; font-size: 13px; margin: 4px 0 0; }
+        .chart-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        .chart-box { background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; }
+        .chart-box h4 { margin-top: 0; color: #1a237e; }
+        @media (max-width: 768px) { .chart-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>📊 Tableau de bord avancé</h1>
+        <div class="header-actions"><a href="/" style="color:#fff;">← Accueil</a></div>
+    </header>
+    <main style="padding:20px;">
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="chart-container">
+            <div class="chart-box"><h4>Inscriptions par cours</h4><canvas id="chartEnrollments"></canvas></div>
+            <div class="chart-box"><h4>Revenus par mois</h4><canvas id="chartRevenue"></canvas></div>
+            <div class="chart-box"><h4>Progression des étudiants</h4><canvas id="chartProgress"></canvas></div>
+            <div class="chart-box"><h4>Répartition par catégorie</h4><canvas id="chartCategory"></canvas></div>
+        </div>
+        <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+            <a href="/api/advanced/export/enrollments?format=csv" class="btn-primary" style="padding:8px 16px; text-decoration:none;">📥 Export CSV (Inscriptions)</a>
+            <a href="/api/advanced/export/enrollments?format=xlsx" class="btn-primary" style="padding:8px 16px; text-decoration:none;">📥 Export Excel (Inscriptions)</a>
+            <a href="/api/advanced/export/grades?format=csv" class="btn-primary" style="padding:8px 16px; text-decoration:none;">📥 Export CSV (Notes)</a>
+            <a href="/api/advanced/export/grades?format=xlsx" class="btn-primary" style="padding:8px 16px; text-decoration:none;">📥 Export Excel (Notes)</a>
+        </div>
+    </main>
+    <footer><p>&copy; 2026 E-Learning Sénégal</p></footer>
+</div>
+<script>
+async function loadDashboard() {
+    try {
+        const resp = await fetch('/api/stats/overview');
+        const stats = await resp.json();
+        document.getElementById('stats-grid').innerHTML = `
+            <div class="stat-card"><h3>${stats.total_users || 0}</h3><p>👥 Utilisateurs</p></div>
+            <div class="stat-card"><h3>${stats.total_courses || 0}</h3><p>📚 Cours</p></div>
+            <div class="stat-card"><h3>${stats.active_enrollments || 0}</h3><p>📋 Inscriptions actives</p></div>
+            <div class="stat-card"><h3>${stats.completions || 0}</h3><p>🏆 Terminés</p></div>
+            <div class="stat-card"><h3>${(stats.total_revenue || 0).toLocaleString()} FCFA</h3><p>💰 Revenus totaux</p></div>
+        `;
+    } catch(e) { console.error(e); }
+    
+    // Charger les données pour les graphiques
+    try {
+        const resp = await fetch('/api/advanced/chart-data');
+        const data = await resp.json();
+        
+        // Graphique 1 : Inscriptions par cours
+        new Chart(document.getElementById('chartEnrollments'), {
+            type: 'bar',
+            data: {
+                labels: data.course_labels,
+                datasets: [{
+                    label: 'Inscriptions',
+                    data: data.course_counts,
+                    backgroundColor: '#1a237e',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        
+        // Graphique 2 : Revenus par mois
+        new Chart(document.getElementById('chartRevenue'), {
+            type: 'line',
+            data: {
+                labels: data.revenue_labels,
+                datasets: [{
+                    label: 'Revenus (FCFA)',
+                    data: data.revenue_values,
+                    borderColor: '#2e7d32',
+                    backgroundColor: 'rgba(46,125,50,0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true }
+        });
+        
+        // Graphique 3 : Progression des étudiants
+        new Chart(document.getElementById('chartProgress'), {
+            type: 'doughnut',
+            data: {
+                labels: ['0-25%', '26-50%', '51-75%', '76-100%'],
+                datasets: [{
+                    data: data.progress_groups,
+                    backgroundColor: ['#ffcdd2', '#fff3e0', '#c8e6c9', '#1a237e']
+                }]
+            },
+            options: { responsive: true }
+        });
+        
+        // Graphique 4 : Répartition par catégorie
+        new Chart(document.getElementById('chartCategory'), {
+            type: 'pie',
+            data: {
+                labels: data.category_labels,
+                datasets: [{
+                    data: data.category_counts,
+                    backgroundColor: ['#1a237e','#0d47a1','#2e7d32','#ffc107','#d32f2f','#6a1b9a']
+                }]
+            },
+            options: { responsive: true }
+        });
+    } catch(e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>
