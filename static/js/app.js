@@ -25,6 +25,20 @@ function showLogin() { document.getElementById('modal-login').style.display = 'f
 function showRegister() { document.getElementById('modal-register').style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+// Nouvelle fonction pour remplir les champs de login à partir du sélecteur
+function fillLoginFields() {
+    const select = document.getElementById('test-account');
+    const value = select.value;
+    if (!value) {
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        return;
+    }
+    const parts = value.split('|');
+    document.getElementById('login-email').value = parts[0];
+    document.getElementById('login-password').value = parts[1];
+}
+
 async function login(event) {
     event.preventDefault();
     const email = document.getElementById('login-email').value;
