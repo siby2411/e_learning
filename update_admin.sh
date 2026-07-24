@@ -1,3 +1,7 @@
+#!/bin/bash
+cd ~/cours_en_ligne
+
+cat > templates/admin.html << 'EOT'
 <!DOCTYPE html>
 <html>
 <head>
@@ -366,3 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+EOT
+
+echo "✅ templates/admin.html mis à jour avec les formulaires complets."
+echo "🔄 Redémarrez l'application : ./elearning.sh"
